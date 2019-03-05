@@ -1,3 +1,7 @@
+"""
+This module handle interaction with VK, mostly processing the user request to retrieve the post memes.
+In the user side just use get_photo_links_user_request method
+"""
 import re
 import vk
 import os
@@ -6,17 +10,18 @@ from exceptions import IncorrectInputException
 from exceptions import WrongUrlException
 from exceptions import PostWithoutImagesException
 
-VK_API_KEY = os.environ('VK_API_KEY')
+_VK_API_KEY = os.environ('VK_API_KEY')
+_REGEX_WALL_ID = re.compile(r'wall(-?\d+_\d+)')
 
 
-def get_images_from_post(post: dict):
+def _get_images_from_post(post: dict):
     if 'attachments' not in post:
         raise PostWithoutImagesException()
     attachments = post['attachments']
     photos = []
-    for attch in attachments:
-        if 'photo' in attch:
-            photos.append(attch['photo'])
+    for attach in attachments:
+        if 'photo' in attach:
+            photos.append(attach['photo'])
     if len(photos) == 0:
         raise PostWithoutImagesException()
     photo_links = []
@@ -29,8 +34,8 @@ def get_images_from_post(post: dict):
     return photo_links
 
 
-def get_post_data(post_id: str):
-    ses = vk.Session(access_token=VK_API_KEY)
+def _get_post_data(post_id: str):
+    ses = vk.Session(access_token=_VK_API_KEY)
     api = vk.API(ses, v='5.92', timeout=10)
     posts = api.wall.getById(posts=[post_id])
     if len(posts) != 1:
@@ -38,16 +43,15 @@ def get_post_data(post_id: str):
     return posts[0]
 
 
-def get_wall_id(user_string: str) -> str:
-    reg = re.compile(r'wall(-+\d+_\d+)')
-    search_result = reg.search(user_string)
+def _get_wall_id(user_string: str) -> str:
+    search_result = _REGEX_WALL_ID.search(user_string)
     if search_result is None:
         raise IncorrectInputException()
     else:
         return search_result.group(1)
 
 
-def process_user_request(user_string: str):
-    wall_id = get_wall_id(user_string)
-    post = get_post_data(wall_id)
-    return get_images_from_post(post)
+def get_photo_links_user_request(user_string: str):
+    wall_id = _get_wall_id(user_string)
+    post = _get_post_data(wall_id)
+    return _get_images_from_post(post)
